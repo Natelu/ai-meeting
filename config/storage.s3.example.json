@@ -1,0 +1,9 @@
+{
+  "type": "s3",
+  "bucket": "meeting-assets",
+  "region": "local",
+  "endpoint": "http://minio:9000",
+  "accessKeyId": "minioadmin",
+  "secretAccessKey": "minioadmin123",
+  "prefix": "tenant-a/"
+}

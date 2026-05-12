@@ -1,0 +1,5 @@
+{
+  "type": "nas",
+  "mountPath": "/mnt/customer-meeting-assets",
+  "prefix": "tenant-a/"
+}

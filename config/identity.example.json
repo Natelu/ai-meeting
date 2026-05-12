@@ -1,0 +1,16 @@
+{
+  "mode": "mock",
+  "defaultRole": "viewer",
+  "adminExternalUserIds": ["u-001"],
+  "roleMappings": {
+    "meeting_admin": "admin",
+    "meeting_host": "host",
+    "meeting_viewer": "viewer"
+  },
+  "oidc": {
+    "issuer": "https://idp.example.local",
+    "clientId": "ai-meeting",
+    "clientSecret": "replace-me",
+    "redirectUri": "https://meeting.example.local/auth/callback"
+  }
+}

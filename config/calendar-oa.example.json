@@ -1,0 +1,7 @@
+{
+  "mode": "mock",
+  "webhookSecret": "replace-me",
+  "allowedEventTypes": ["meeting.created", "meeting.updated", "meeting.cancelled"],
+  "defaultDurationMinutes": 60,
+  "callbackUrl": "https://meeting.example.local/api/integrations/calendar/events"
+}
