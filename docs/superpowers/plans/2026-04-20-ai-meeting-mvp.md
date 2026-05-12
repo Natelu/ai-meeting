@@ -1,6 +1,6 @@
 # AI Meeting MVP Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Build a private-deployable AI meeting MVP for SMEs with stable meetings, recording, transcription, summaries, search, and customer-controlled storage.
 
@@ -25,7 +25,7 @@
 - Create: `Makefile`
 - Test: `services/api/internal/http/health_test.go`
 
-- [ ] **Step 1: Write the failing API smoke test**
+- [x] **Step 1: Write the failing API smoke test**
 
 ```go
 package http_test
@@ -51,12 +51,12 @@ func TestHealthcheck(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd services/api && go test ./...`
 Expected: FAIL with undefined router bootstrap or missing package
 
-- [ ] **Step 3: Write minimal API and workspace bootstrap**
+- [x] **Step 3: Write minimal API and workspace bootstrap**
 
 ```go
 package http
@@ -86,7 +86,7 @@ export interface MeetingSummary {
 }
 ```
 
-- [ ] **Step 4: Add local infrastructure bootstrap**
+- [x] **Step 4: Add local infrastructure bootstrap**
 
 ```yaml
 services:
@@ -100,12 +100,12 @@ services:
     image: livekit/livekit-server:latest
 ```
 
-- [ ] **Step 5: Run tests to verify baseline passes**
+- [x] **Step 5: Run tests to verify baseline passes**
 
 Run: `cd services/api && go test ./...`
 Expected: PASS
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add apps services packages infra Makefile
@@ -122,7 +122,7 @@ git commit -m "chore: scaffold ai meeting monorepo"
 - Modify: `services/api/internal/http/router.go`
 - Test: `services/api/internal/http/meeting_handler_test.go`
 
-- [ ] **Step 1: Write the failing lifecycle test**
+- [x] **Step 1: Write the failing lifecycle test**
 
 ```go
 func TestCreateMeetingReturnsScheduledStatus(t *testing.T) {
@@ -140,12 +140,12 @@ func TestCreateMeetingReturnsScheduledStatus(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd services/api && go test ./internal/http -run TestCreateMeetingReturnsScheduledStatus`
 Expected: FAIL with `404 Not Found`
 
-- [ ] **Step 3: Add meeting domain and minimal service**
+- [x] **Step 3: Add meeting domain and minimal service**
 
 ```go
 type Meeting struct {
@@ -165,19 +165,19 @@ func CreateMeeting(title, hostUserID string) Meeting {
 }
 ```
 
-- [ ] **Step 4: Expose the API route**
+- [x] **Step 4: Expose the API route**
 
 ```go
 api := r.Group("/api")
 api.POST("/meetings", handler.CreateMeeting)
 ```
 
-- [ ] **Step 5: Run tests**
+- [x] **Step 5: Run tests**
 
 Run: `cd services/api && go test ./internal/http`
 Expected: PASS
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add services/api
@@ -193,7 +193,7 @@ git commit -m "feat: add meeting lifecycle api"
 - Modify: `packages/contracts/meeting.ts`
 - Test: `services/api/internal/http/webhook_handler_test.go`
 
-- [ ] **Step 1: Write the failing webhook test**
+- [x] **Step 1: Write the failing webhook test**
 
 ```go
 func TestRecordingFinishedWebhookCreatesProcessingJob(t *testing.T) {
@@ -211,12 +211,12 @@ func TestRecordingFinishedWebhookCreatesProcessingJob(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd services/api && go test ./internal/http -run TestRecordingFinishedWebhookCreatesProcessingJob`
 Expected: FAIL with `404 Not Found`
 
-- [ ] **Step 3: Add LiveKit adapter and webhook route**
+- [x] **Step 3: Add LiveKit adapter and webhook route**
 
 ```go
 router.POST("/webhooks/livekit", func(c *gin.Context) {
@@ -230,7 +230,7 @@ router.POST("/webhooks/livekit", func(c *gin.Context) {
 })
 ```
 
-- [ ] **Step 4: Update meeting contract**
+- [x] **Step 4: Update meeting contract**
 
 ```ts
 export interface RecordingEvent {
@@ -239,12 +239,12 @@ export interface RecordingEvent {
 }
 ```
 
-- [ ] **Step 5: Run tests**
+- [x] **Step 5: Run tests**
 
 Run: `cd services/api && go test ./internal/http -run TestRecordingFinishedWebhookCreatesProcessingJob`
 Expected: PASS
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add services/api packages/contracts
@@ -261,7 +261,7 @@ git commit -m "feat: add livekit recording webhook flow"
 - Create: `services/api/internal/http/job_handler.go`
 - Test: `services/jobs/internal/tasks/post_meeting_test.go`
 
-- [ ] **Step 1: Write the failing jobs test**
+- [x] **Step 1: Write the failing jobs test**
 
 ```go
 func TestPostMeetingTaskReturnsSummaryPayload(t *testing.T) {
@@ -275,12 +275,12 @@ func TestPostMeetingTaskReturnsSummaryPayload(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd services/jobs && go test ./internal/tasks -run TestPostMeetingTaskReturnsSummaryPayload`
 Expected: FAIL with missing task implementation
 
-- [ ] **Step 3: Write minimal pipeline implementation**
+- [x] **Step 3: Write minimal pipeline implementation**
 
 ```go
 func ProcessPostMeetingAsset(meetingID, audioPath string) Result {
@@ -296,7 +296,7 @@ func ProcessPostMeetingAsset(meetingID, audioPath string) Result {
 }
 ```
 
-- [ ] **Step 4: Add job status endpoint in the API**
+- [x] **Step 4: Add job status endpoint in the API**
 
 ```go
 router.GET("/api/jobs/:jobId", func(c *gin.Context) {
@@ -304,12 +304,12 @@ router.GET("/api/jobs/:jobId", func(c *gin.Context) {
 })
 ```
 
-- [ ] **Step 5: Run tests**
+- [x] **Step 5: Run tests**
 
 Run: `cd services/jobs && go test ./internal/tasks`
 Expected: PASS
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add services/jobs services/api
@@ -326,7 +326,7 @@ git commit -m "feat: add post meeting processing pipeline"
 - Test: `services/api/internal/http/search_handler_test.go`
 - Test: `services/api/internal/http/export_handler_test.go`
 
-- [ ] **Step 1: Write the failing search test**
+- [x] **Step 1: Write the failing search test**
 
 ```go
 func TestSearchReturnsMatchingMeetingSnippets(t *testing.T) {
@@ -340,12 +340,12 @@ func TestSearchReturnsMatchingMeetingSnippets(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd services/api && go test ./internal/http -run TestSearchReturnsMatchingMeetingSnippets`
 Expected: FAIL with `404 Not Found`
 
-- [ ] **Step 3: Add minimal search and export routes**
+- [x] **Step 3: Add minimal search and export routes**
 
 ```go
 router.GET("/api/search", func(c *gin.Context) {
@@ -357,7 +357,7 @@ router.GET("/api/meetings/:meetingId/export", func(c *gin.Context) {
 })
 ```
 
-- [ ] **Step 4: Add permission checks around asset access**
+- [x] **Step 4: Add permission checks around asset access**
 
 ```go
 func CanAccessAsset(role string) bool {
@@ -370,12 +370,12 @@ func CanAccessAsset(role string) bool {
 }
 ```
 
-- [ ] **Step 5: Run tests**
+- [x] **Step 5: Run tests**
 
 Run: `cd services/api && go test ./internal/http`
 Expected: PASS
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add services/api
@@ -392,7 +392,7 @@ git commit -m "feat: add transcript search and exports"
 - Create: `docs/operations.md`
 - Test: `services/api/internal/http/metrics_test.go`
 
-- [ ] **Step 1: Write the failing metrics test**
+- [x] **Step 1: Write the failing metrics test**
 
 ```go
 func TestMetricsEndpointExists(t *testing.T) {
@@ -406,12 +406,12 @@ func TestMetricsEndpointExists(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd services/api && go test ./internal/http -run TestMetricsEndpointExists`
 Expected: FAIL with `404 Not Found`
 
-- [ ] **Step 3: Add minimal metrics route and pilot deployment files**
+- [x] **Step 3: Add minimal metrics route and pilot deployment files**
 
 ```go
 router.GET("/metrics", func(c *gin.Context) {
@@ -429,7 +429,7 @@ services:
     image: grafana/grafana:latest
 ```
 
-- [ ] **Step 4: Document pilot deployment and operations**
+- [x] **Step 4: Document pilot deployment and operations**
 
 ```md
 1. Provision VM with Docker and mounted storage.
@@ -438,12 +438,12 @@ services:
 4. Validate health, recording flow, and jobs pipeline before inviting pilot users.
 ```
 
-- [ ] **Step 5: Run tests**
+- [x] **Step 5: Run tests**
 
 Run: `cd services/api && go test ./internal/http -run TestMetricsEndpointExists`
 Expected: PASS
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add infra docs services/api
