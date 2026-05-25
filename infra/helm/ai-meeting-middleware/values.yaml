@@ -1,0 +1,111 @@
+global:
+  nameOverride: ""
+  fullnameOverride: ""
+  storageRoot: /mnt/data/k8s/ai-meeting
+
+nodePorts:
+  postgresRw: 30432
+  postgresRo: 30433
+  redis: 30379
+  redisSentinel: 30380
+  livekitWs: 30880
+  livekitRtcTcp: 30881
+  livekitRtcUdp: 30882
+  whisperAsr: 30901
+  prometheus: 30090
+  grafana: 30031
+  loki: 30100
+
+secrets:
+  create: true
+  postgres:
+    username: ai_meeting
+    password: change-me-postgres
+    database: ai_meeting
+  redis:
+    password: change-me-redis
+  livekit:
+    apiKey: change-me-livekit-key
+    apiSecret: change-me-livekit-secret
+  grafana:
+    adminUser: admin
+    adminPassword: change-me-grafana
+  modelS3:
+    accessKey: change-me-minio-access-key
+    secretKey: change-me-minio-secret-key
+
+postgres:
+  enabled: true
+  clusterName: postgres
+  instances: 3
+  imageName: ghcr.io/cloudnative-pg/postgresql:16.4
+  storage:
+    size: 50Gi
+    storageClass: local-path
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: "2"
+      memory: 4Gi
+
+redis:
+  enabled: true
+  image: redis:7
+  replicaCount: 2
+  storage:
+    masterHostPath: redis-master
+    replicaHostPath: redis-replica
+  sentinel:
+    enabled: true
+    replicas: 3
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+
+livekit:
+  enabled: true
+  image: livekit/livekit-server:latest
+  logLevel: info
+  webhookUrls:
+    - http://api:8080/webhooks/livekit
+
+modelS3:
+  endpoint: http://112.91.142.91:9000
+  bucket: meeting-assets
+  prefix: models/whisper/large-v3
+  insecure: true
+
+whisperAsr:
+  enabled: true
+  image: registry.cn-wulanchabu.aliyuncs.com/docker-mr-ali/onerahmet.openai-whisper-asr-webservice:latest-gpu
+  model: large-v3
+  modelMountPath: /models
+  gpuCount: 1
+  resources:
+    requests:
+      cpu: "2"
+      memory: 4Gi
+      nvidia.com/gpu: 1
+    limits:
+      cpu: "8"
+      memory: 16Gi
+      nvidia.com/gpu: 1
+
+observability:
+  enabled: true
+  prometheus:
+    image: prom/prometheus:v3.0.1
+  grafana:
+    image: grafana/grafana:11.4.0
+    storage:
+      hostPath: grafana
+  loki:
+    image: grafana/loki:3.3.2
+    storage:
+      hostPath: loki

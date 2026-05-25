@@ -1,0 +1,218 @@
+{{- if .Values.redis.enabled }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "ai-meeting-middleware.fullname" . }}-redis-master
+  labels:
+    {{- include "ai-meeting-middleware.labels" . | nindent 4 }}
+    app.kubernetes.io/component: redis-master
+spec:
+  serviceName: {{ include "ai-meeting-middleware.fullname" . }}-redis-master
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "ai-meeting-middleware.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: redis-master
+  template:
+    metadata:
+      labels:
+        {{- include "ai-meeting-middleware.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: redis-master
+    spec:
+      containers:
+        - name: redis
+          image: {{ .Values.redis.image | quote }}
+          command:
+            - redis-server
+            - --appendonly
+            - "yes"
+            - --requirepass
+            - $(REDIS_PASSWORD)
+            - --masterauth
+            - $(REDIS_PASSWORD)
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "ai-meeting-middleware.secretName" . }}
+                  key: redis-password
+          ports:
+            - name: redis
+              containerPort: 6379
+          volumeMounts:
+            - name: redis-data
+              mountPath: /data
+          resources:
+            {{- toYaml .Values.redis.resources | nindent 12 }}
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", "redis-cli -a \"$REDIS_PASSWORD\" ping | grep PONG"]
+            initialDelaySeconds: 10
+            periodSeconds: 10
+      volumes:
+        - name: redis-data
+          hostPath:
+            path: {{ printf "%s/%s" .Values.global.storageRoot .Values.redis.storage.masterHostPath | quote }}
+            type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "ai-meeting-middleware.fullname" . }}-redis-master
+  labels:
+    {{- include "ai-meeting-middleware.labels" . | nindent 4 }}
+spec:
+  type: NodePort
+  selector:
+    {{- include "ai-meeting-middleware.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: redis-master
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: 6379
+      nodePort: {{ .Values.nodePorts.redis }}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "ai-meeting-middleware.fullname" . }}-redis-replica
+  labels:
+    {{- include "ai-meeting-middleware.labels" . | nindent 4 }}
+    app.kubernetes.io/component: redis-replica
+spec:
+  serviceName: {{ include "ai-meeting-middleware.fullname" . }}-redis-replica
+  replicas: {{ .Values.redis.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "ai-meeting-middleware.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: redis-replica
+  template:
+    metadata:
+      labels:
+        {{- include "ai-meeting-middleware.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: redis-replica
+    spec:
+      containers:
+        - name: redis
+          image: {{ .Values.redis.image | quote }}
+          command:
+            - redis-server
+            - --appendonly
+            - "yes"
+            - --replicaof
+            - {{ include "ai-meeting-middleware.fullname" . }}-redis-master
+            - "6379"
+            - --requirepass
+            - $(REDIS_PASSWORD)
+            - --masterauth
+            - $(REDIS_PASSWORD)
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "ai-meeting-middleware.secretName" . }}
+                  key: redis-password
+          ports:
+            - name: redis
+              containerPort: 6379
+          volumeMounts:
+            - name: redis-data
+              mountPath: /data
+          resources:
+            {{- toYaml .Values.redis.resources | nindent 12 }}
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", "redis-cli -a \"$REDIS_PASSWORD\" ping | grep PONG"]
+            initialDelaySeconds: 10
+            periodSeconds: 10
+      volumes:
+        - name: redis-data
+          hostPath:
+            path: {{ printf "%s/%s" .Values.global.storageRoot .Values.redis.storage.replicaHostPath | quote }}
+            type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "ai-meeting-middleware.fullname" . }}-redis-replica
+  labels:
+    {{- include "ai-meeting-middleware.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "ai-meeting-middleware.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: redis-replica
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: 6379
+---
+{{- if .Values.redis.sentinel.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ai-meeting-middleware.fullname" . }}-redis-sentinel
+  labels:
+    {{- include "ai-meeting-middleware.labels" . | nindent 4 }}
+    app.kubernetes.io/component: redis-sentinel
+spec:
+  replicas: {{ .Values.redis.sentinel.replicas }}
+  selector:
+    matchLabels:
+      {{- include "ai-meeting-middleware.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: redis-sentinel
+  template:
+    metadata:
+      labels:
+        {{- include "ai-meeting-middleware.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: redis-sentinel
+    spec:
+      containers:
+        - name: sentinel
+          image: {{ .Values.redis.image | quote }}
+          command:
+            - /bin/sh
+            - -lc
+            - |
+              cat > /tmp/sentinel.conf <<EOF
+              port 26379
+              sentinel monitor mymaster {{ include "ai-meeting-middleware.fullname" . }}-redis-master 6379 2
+              sentinel auth-pass mymaster ${REDIS_PASSWORD}
+              sentinel down-after-milliseconds mymaster 5000
+              sentinel failover-timeout mymaster 10000
+              sentinel parallel-syncs mymaster 1
+              EOF
+              redis-sentinel /tmp/sentinel.conf
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "ai-meeting-middleware.secretName" . }}
+                  key: redis-password
+          ports:
+            - name: sentinel
+              containerPort: 26379
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", "redis-cli -p 26379 ping | grep PONG"]
+            initialDelaySeconds: 10
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "ai-meeting-middleware.fullname" . }}-redis-sentinel
+  labels:
+    {{- include "ai-meeting-middleware.labels" . | nindent 4 }}
+spec:
+  type: NodePort
+  selector:
+    {{- include "ai-meeting-middleware.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: redis-sentinel
+  ports:
+    - name: sentinel
+      port: 26379
+      targetPort: 26379
+      nodePort: {{ .Values.nodePorts.redisSentinel }}
+{{- end }}
+{{- end }}

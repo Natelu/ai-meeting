@@ -1,0 +1,85 @@
+{{- if .Values.livekit.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ai-meeting-middleware.fullname" . }}-livekit
+  labels:
+    {{- include "ai-meeting-middleware.labels" . | nindent 4 }}
+    app.kubernetes.io/component: livekit
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "ai-meeting-middleware.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: livekit
+  template:
+    metadata:
+      labels:
+        {{- include "ai-meeting-middleware.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: livekit
+    spec:
+      containers:
+        - name: livekit
+          image: {{ .Values.livekit.image | quote }}
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              envsubst < /config/livekit.yaml > /tmp/livekit.yaml
+              /livekit-server --config /tmp/livekit.yaml
+          env:
+            - name: LIVEKIT_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "ai-meeting-middleware.secretName" . }}
+                  key: livekit-api-key
+            - name: LIVEKIT_API_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "ai-meeting-middleware.secretName" . }}
+                  key: livekit-api-secret
+          ports:
+            - name: ws
+              containerPort: 7880
+              protocol: TCP
+            - name: rtc-tcp
+              containerPort: 7881
+              protocol: TCP
+            - name: rtc-udp
+              containerPort: 7882
+              protocol: UDP
+          volumeMounts:
+            - name: livekit-config
+              mountPath: /config
+      volumes:
+        - name: livekit-config
+          configMap:
+            name: {{ include "ai-meeting-middleware.fullname" . }}-livekit
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "ai-meeting-middleware.fullname" . }}-livekit
+  labels:
+    {{- include "ai-meeting-middleware.labels" . | nindent 4 }}
+spec:
+  type: NodePort
+  selector:
+    {{- include "ai-meeting-middleware.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: livekit
+  ports:
+    - name: ws
+      port: 7880
+      targetPort: 7880
+      protocol: TCP
+      nodePort: {{ .Values.nodePorts.livekitWs }}
+    - name: rtc-tcp
+      port: 7881
+      targetPort: 7881
+      protocol: TCP
+      nodePort: {{ .Values.nodePorts.livekitRtcTcp }}
+    - name: rtc-udp
+      port: 7882
+      targetPort: 7882
+      protocol: UDP
+      nodePort: {{ .Values.nodePorts.livekitRtcUdp }}
+{{- end }}

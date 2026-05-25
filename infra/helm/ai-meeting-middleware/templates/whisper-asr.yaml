@@ -1,0 +1,99 @@
+{{- if .Values.whisperAsr.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ai-meeting-middleware.fullname" . }}-whisper-asr
+  labels:
+    {{- include "ai-meeting-middleware.labels" . | nindent 4 }}
+    app.kubernetes.io/component: whisper-asr
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "ai-meeting-middleware.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: whisper-asr
+  template:
+    metadata:
+      labels:
+        {{- include "ai-meeting-middleware.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: whisper-asr
+    spec:
+      initContainers:
+        - name: sync-model-from-minio
+          image: minio/mc:latest
+          env:
+            - name: MODEL_S3_ENDPOINT
+              value: {{ .Values.modelS3.endpoint | quote }}
+            - name: MODEL_S3_BUCKET
+              value: {{ .Values.modelS3.bucket | quote }}
+            - name: MODEL_S3_PREFIX
+              value: {{ .Values.modelS3.prefix | quote }}
+            - name: MODEL_S3_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "ai-meeting-middleware.secretName" . }}
+                  key: model-s3-access-key
+            - name: MODEL_S3_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "ai-meeting-middleware.secretName" . }}
+                  key: model-s3-secret-key
+          command:
+            - /bin/sh
+            - -lc
+            - |
+              set -e
+              mkdir -p {{ .Values.whisperAsr.modelMountPath }}/{{ .Values.whisperAsr.model }}
+              mc alias set modelstore "$MODEL_S3_ENDPOINT" "$MODEL_S3_ACCESS_KEY" "$MODEL_S3_SECRET_KEY"
+              mc cp --recursive "modelstore/$MODEL_S3_BUCKET/$MODEL_S3_PREFIX/" "{{ .Values.whisperAsr.modelMountPath }}/{{ .Values.whisperAsr.model }}/"
+              test -f "{{ .Values.whisperAsr.modelMountPath }}/{{ .Values.whisperAsr.model }}/model.bin"
+          volumeMounts:
+            - name: model-data
+              mountPath: {{ .Values.whisperAsr.modelMountPath | quote }}
+      containers:
+        - name: whisper-asr
+          image: {{ .Values.whisperAsr.image | quote }}
+          env:
+            - name: ASR_ENGINE
+              value: faster_whisper
+            - name: ASR_MODEL
+              value: {{ printf "%s/%s" .Values.whisperAsr.modelMountPath .Values.whisperAsr.model | quote }}
+            - name: ASR_DEVICE
+              value: cuda
+            - name: ASR_MODEL_PATH
+              value: {{ .Values.whisperAsr.modelMountPath | quote }}
+          ports:
+            - name: http
+              containerPort: 9000
+          volumeMounts:
+            - name: model-data
+              mountPath: {{ .Values.whisperAsr.modelMountPath | quote }}
+          resources:
+            {{- toYaml .Values.whisperAsr.resources | nindent 12 }}
+          readinessProbe:
+            httpGet:
+              path: /docs
+              port: 9000
+            initialDelaySeconds: 20
+            periodSeconds: 10
+      volumes:
+        - name: model-data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "ai-meeting-middleware.fullname" . }}-whisper-asr
+  labels:
+    {{- include "ai-meeting-middleware.labels" . | nindent 4 }}
+spec:
+  type: NodePort
+  selector:
+    {{- include "ai-meeting-middleware.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: whisper-asr
+  ports:
+    - name: http
+      port: 9000
+      targetPort: 9000
+      nodePort: {{ .Values.nodePorts.whisperAsr }}
+{{- end }}

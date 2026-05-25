@@ -1,0 +1,23 @@
+AI Meeting middleware has been installed.
+
+PostgreSQL is managed by CloudNativePG:
+  RW service: {{ include "ai-meeting-middleware.fullname" . }}-{{ .Values.postgres.clusterName }}-rw
+  RO service: {{ include "ai-meeting-middleware.fullname" . }}-{{ .Values.postgres.clusterName }}-ro
+  RW NodePort: {{ .Values.nodePorts.postgresRw }}
+  RO NodePort: {{ .Values.nodePorts.postgresRo }}
+
+NodePort endpoints:
+  Redis master: {{ .Values.nodePorts.redis }}
+  Redis Sentinel: {{ .Values.nodePorts.redisSentinel }}
+  LiveKit WS:  {{ .Values.nodePorts.livekitWs }}
+  LiveKit TCP: {{ .Values.nodePorts.livekitRtcTcp }}
+  LiveKit UDP: {{ .Values.nodePorts.livekitRtcUdp }}
+  Whisper ASR: {{ .Values.nodePorts.whisperAsr }}
+  Prometheus:  {{ .Values.nodePorts.prometheus }}
+  Grafana:     {{ .Values.nodePorts.grafana }}
+  Loki:        {{ .Values.nodePorts.loki }}
+
+Check status:
+  kubectl get pods -n {{ .Release.Namespace }}
+  kubectl get cluster -n {{ .Release.Namespace }}
+  kubectl get svc -n {{ .Release.Namespace }}

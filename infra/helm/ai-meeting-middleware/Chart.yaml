@@ -1,0 +1,6 @@
+apiVersion: v2
+name: ai-meeting-middleware
+description: Kubernetes middleware stack for AI Meeting
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

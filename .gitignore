@@ -10,3 +10,5 @@ coverage/
 apps/web/.next/
 infra/data/
 .worktrees/
+config/.env
+config/credentials.env

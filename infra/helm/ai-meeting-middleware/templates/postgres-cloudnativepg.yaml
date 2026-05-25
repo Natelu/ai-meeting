@@ -1,0 +1,61 @@
+{{- if .Values.postgres.enabled }}
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: {{ include "ai-meeting-middleware.fullname" . }}-{{ .Values.postgres.clusterName }}
+  labels:
+    {{- include "ai-meeting-middleware.labels" . | nindent 4 }}
+spec:
+  instances: {{ .Values.postgres.instances }}
+  imageName: {{ .Values.postgres.imageName | quote }}
+  primaryUpdateStrategy: unsupervised
+  bootstrap:
+    initdb:
+      database: {{ .Values.secrets.postgres.database | quote }}
+      owner: {{ .Values.secrets.postgres.username | quote }}
+      secret:
+        name: {{ include "ai-meeting-middleware.secretName" . }}
+  storage:
+    size: {{ .Values.postgres.storage.size | quote }}
+    storageClass: {{ .Values.postgres.storage.storageClass | quote }}
+  resources:
+    {{- toYaml .Values.postgres.resources | nindent 4 }}
+{{- end }}
+---
+{{- if .Values.postgres.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "ai-meeting-middleware.fullname" . }}-postgres-rw-nodeport
+  labels:
+    {{- include "ai-meeting-middleware.labels" . | nindent 4 }}
+spec:
+  type: NodePort
+  selector:
+    cnpg.io/cluster: {{ include "ai-meeting-middleware.fullname" . }}-{{ .Values.postgres.clusterName }}
+    role: primary
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432
+      nodePort: {{ .Values.nodePorts.postgresRw }}
+{{- end }}
+---
+{{- if .Values.postgres.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "ai-meeting-middleware.fullname" . }}-postgres-ro-nodeport
+  labels:
+    {{- include "ai-meeting-middleware.labels" . | nindent 4 }}
+spec:
+  type: NodePort
+  selector:
+    cnpg.io/cluster: {{ include "ai-meeting-middleware.fullname" . }}-{{ .Values.postgres.clusterName }}
+    role: replica
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432
+      nodePort: {{ .Values.nodePorts.postgresRo }}
+{{- end }}

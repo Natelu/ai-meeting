@@ -1,0 +1,187 @@
+{{- if .Values.observability.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ai-meeting-middleware.fullname" . }}-prometheus
+  labels:
+    {{- include "ai-meeting-middleware.labels" . | nindent 4 }}
+    app.kubernetes.io/component: prometheus
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "ai-meeting-middleware.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: prometheus
+  template:
+    metadata:
+      labels:
+        {{- include "ai-meeting-middleware.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: prometheus
+    spec:
+      containers:
+        - name: prometheus
+          image: {{ .Values.observability.prometheus.image | quote }}
+          args:
+            - --config.file=/etc/prometheus/prometheus.yml
+          ports:
+            - name: http
+              containerPort: 9090
+          volumeMounts:
+            - name: config
+              mountPath: /etc/prometheus
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "ai-meeting-middleware.fullname" . }}-prometheus
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "ai-meeting-middleware.fullname" . }}-prometheus
+  labels:
+    {{- include "ai-meeting-middleware.labels" . | nindent 4 }}
+spec:
+  type: NodePort
+  selector:
+    {{- include "ai-meeting-middleware.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: prometheus
+  ports:
+    - name: http
+      port: 9090
+      targetPort: 9090
+      nodePort: {{ .Values.nodePorts.prometheus }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ai-meeting-middleware.fullname" . }}-grafana
+  labels:
+    {{- include "ai-meeting-middleware.labels" . | nindent 4 }}
+    app.kubernetes.io/component: grafana
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "ai-meeting-middleware.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: grafana
+  template:
+    metadata:
+      labels:
+        {{- include "ai-meeting-middleware.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: grafana
+    spec:
+      initContainers:
+        - name: fix-permissions
+          image: busybox:1.36
+          command: ["sh", "-c", "chown -R 472:472 /var/lib/grafana"]
+          volumeMounts:
+            - name: grafana-data
+              mountPath: /var/lib/grafana
+      containers:
+        - name: grafana
+          image: {{ .Values.observability.grafana.image | quote }}
+          env:
+            - name: GF_SECURITY_ADMIN_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "ai-meeting-middleware.secretName" . }}
+                  key: grafana-admin-user
+            - name: GF_SECURITY_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "ai-meeting-middleware.secretName" . }}
+                  key: grafana-admin-password
+          ports:
+            - name: http
+              containerPort: 3000
+          volumeMounts:
+            - name: grafana-data
+              mountPath: /var/lib/grafana
+      volumes:
+        - name: grafana-data
+          hostPath:
+            path: {{ printf "%s/%s" .Values.global.storageRoot .Values.observability.grafana.storage.hostPath | quote }}
+            type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "ai-meeting-middleware.fullname" . }}-grafana
+  labels:
+    {{- include "ai-meeting-middleware.labels" . | nindent 4 }}
+spec:
+  type: NodePort
+  selector:
+    {{- include "ai-meeting-middleware.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: grafana
+  ports:
+    - name: http
+      port: 3000
+      targetPort: 3000
+      nodePort: {{ .Values.nodePorts.grafana }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ai-meeting-middleware.fullname" . }}-loki
+  labels:
+    {{- include "ai-meeting-middleware.labels" . | nindent 4 }}
+    app.kubernetes.io/component: loki
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "ai-meeting-middleware.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: loki
+  template:
+    metadata:
+      labels:
+        {{- include "ai-meeting-middleware.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: loki
+    spec:
+      initContainers:
+        - name: fix-permissions
+          image: busybox:1.36
+          command: ["sh", "-c", "chown -R 10001:10001 /loki"]
+          volumeMounts:
+            - name: loki-data
+              mountPath: /loki
+      containers:
+        - name: loki
+          image: {{ .Values.observability.loki.image | quote }}
+          args:
+            - -config.file=/etc/loki/local-config.yaml
+          ports:
+            - name: http
+              containerPort: 3100
+          volumeMounts:
+            - name: config
+              mountPath: /etc/loki
+            - name: loki-data
+              mountPath: /loki
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "ai-meeting-middleware.fullname" . }}-loki
+        - name: loki-data
+          hostPath:
+            path: {{ printf "%s/%s" .Values.global.storageRoot .Values.observability.loki.storage.hostPath | quote }}
+            type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "ai-meeting-middleware.fullname" . }}-loki
+  labels:
+    {{- include "ai-meeting-middleware.labels" . | nindent 4 }}
+spec:
+  type: NodePort
+  selector:
+    {{- include "ai-meeting-middleware.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: loki
+  ports:
+    - name: http
+      port: 3100
+      targetPort: 3100
+      nodePort: {{ .Values.nodePorts.loki }}
+{{- end }}
